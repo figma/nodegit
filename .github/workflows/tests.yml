@@ -57,7 +57,7 @@ jobs:
         # There is a race condition in node/generate that needs to be fixed
         run: |
           chown root .
-          npm set unsafe-perm true
+          npm set unsafe-perm true || true
           node utils/retry npm install
 
       - name: Test
