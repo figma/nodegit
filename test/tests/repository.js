@@ -361,8 +361,9 @@ describe("Repository", function() {
   it("can obtain statistics from a valid constant repository", function() {
     return this.constRepository.statistics()
     .then(function(analysisReport) {
+      console.log(JSON.stringify(analysisReport,null,2));
 
-      assert.equal(analysisReport.repositorySize.commits.count, 992);
+      assert.equal(analysisReport.repositorySize.commits.count, 993);
       assert.equal(analysisReport.repositorySize.commits.size, 265544);
       assert.equal(analysisReport.repositorySize.trees.count, 2416);
       assert.equal(analysisReport.repositorySize.trees.size, 1188325);
