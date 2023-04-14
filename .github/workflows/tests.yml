@@ -19,7 +19,7 @@ jobs:
       matrix:
         node: [14, 16, 18]
     runs-on: ubuntu-latest
-    container: ubuntu:16.04
+    container: ubuntu:20.04
     steps:
       - name: Install Dependencies for Ubuntu
         # git >= 2.18 required for actions/checkout git support
