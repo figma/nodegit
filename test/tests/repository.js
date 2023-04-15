@@ -388,7 +388,7 @@ describe("Repository", function() {
       assert.equal(analysisReport.biggestCheckouts.numSymlinks, 2);
       assert.equal(analysisReport.biggestCheckouts.numSubmodules, 4);
 
-      console.log(JSON.stringify(analysisReport,null,2));
+      // console.log(JSON.stringify(analysisReport,null,2));
     });
   });
 });
