@@ -17,7 +17,8 @@ jobs:
     name: "Linux Tests"
     strategy:
       matrix:
-        node: [14, 16, 18]
+        node: [18]
+        arch: [x86, arm64]
     runs-on: ubuntu-latest
     container: ubuntu:20.04
     steps:
@@ -86,8 +87,8 @@ jobs:
     name: "macOS Tests"
     strategy:
       matrix:
-        node: [14, 16, 18]
-    runs-on: macOS-10.15
+        node: [18]
+    runs-on: macos-12
   # This is mostly the same as the Linux steps, waiting for anchor support
   # https://github.com/actions/runner/issues/1182
     steps:
