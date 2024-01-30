@@ -20,7 +20,6 @@ jobs:
         node: [18]
         arch: [x86, arm64]
     runs-on: ubuntu-latest
-    container: ubuntu:20.04
     steps:
       - name: Install Dependencies for Ubuntu
         # git >= 2.18 required for actions/checkout git support
