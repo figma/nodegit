@@ -17,9 +17,10 @@ jobs:
     name: "Linux Tests"
     strategy:
       matrix:
-        node: [14, 16, 18]
+        node: [18]
+        arch: [x86, arm64]
     runs-on: ubuntu-latest
-    container: ubuntu:20.04
+    container: ubuntu:22.04
     steps:
       - name: Install Dependencies for Ubuntu
         # git >= 2.18 required for actions/checkout git support
@@ -86,8 +87,9 @@ jobs:
     name: "macOS Tests"
     strategy:
       matrix:
-        node: [14, 16, 18]
-    runs-on: macOS-10.15
+        node: [18]
+        os: [macos-12, macos-14]
+    runs-on: {{ matrix.os }}
   # This is mostly the same as the Linux steps, waiting for anchor support
   # https://github.com/actions/runner/issues/1182
     steps:
