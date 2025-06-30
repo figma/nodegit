@@ -26,12 +26,13 @@ module.exports = function install() {
   }
 
   return new Promise(function(resolve, reject) {
+    const gypPath = path.join(__dirname, "..", "node_modules", "node-gyp", "bin", "node-gyp.js");
     var spawnedNodePreGyp = spawn(nodePreGyp, args, {
-      shell: process.platform === "win32",
-      env: Object.assign({}, process.env, {
-        npm_config_node_gyp: path.join(__dirname, "..", "node_modules",
-          "node-gyp", "bin", "node-gyp.js")
-      })
+      env: {
+        ...process.env,
+        npm_config_node_gyp: gypPath
+      },
+      shell: process.platform === "win32"
     });
 
     spawnedNodePreGyp.stdout.on("data", function(data) {
