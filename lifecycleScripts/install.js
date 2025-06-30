@@ -27,6 +27,7 @@ module.exports = function install() {
 
   return new Promise(function(resolve, reject) {
     var spawnedNodePreGyp = spawn(nodePreGyp, args, {
+      shell: process.platform === "win32",
       env: Object.assign({}, process.env, {
         npm_config_node_gyp: path.join(__dirname, "..", "node_modules",
           "node-gyp", "bin", "node-gyp.js")
@@ -60,6 +61,6 @@ if (require.main === module) {
     .catch(function(e) {
       console.error("[nodegit] ERROR - Could not finish install");
       console.error("[nodegit] ERROR - finished with error code: " + e);
-      process.exit(e);
+      process.exit(1);
     });
 }
