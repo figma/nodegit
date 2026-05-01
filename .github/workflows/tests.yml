@@ -23,7 +23,7 @@ jobs:
     container: ubuntu:20.04
     steps:
       - name: Install Dependencies for Ubuntu
-        run: apt-get update && apt-get install -y git build-essential clang libssl-dev libkrb5-dev libc++-dev wget python3
+        run: apt-get update && apt-get install -y git build-essential clang-14 libssl-dev libkrb5-dev libc++-14-dev libc++abi-14-dev wget python3
         env:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
@@ -51,8 +51,8 @@ jobs:
 
       - name: Install
         env:
-          CC: clang
-          CXX: clang++
+          CC: clang-14
+          CXX: clang++-14
           npm_config_clang: 1
           GYP_DEFINES: use_obsolete_asm=true
         # There is a race condition in node/generate that needs to be fixed
