@@ -207,6 +207,8 @@ struct OdbObjectsData
 
   struct CommitInfo {
     CommitInfo() = default;
+    CommitInfo(std::string oidTree, size_t size, std::vector<std::string> parents, uint32_t reachability)
+      : oidTree(std::move(oidTree)), size(size), parents(std::move(parents)), reachability(reachability) {}
     ~CommitInfo() = default;
     CommitInfo(const CommitInfo &other) = delete;
     CommitInfo(CommitInfo &&other) = default;
@@ -242,6 +244,8 @@ struct OdbObjectsData
 
   struct BlobInfo {
     BlobInfo() = default;
+    BlobInfo(size_t size, uint32_t reachability)
+      : size(size), reachability(reachability) {}
     ~BlobInfo() = default;
     BlobInfo(const BlobInfo &other) = delete;
     BlobInfo(BlobInfo &&other) = default;
@@ -258,6 +262,8 @@ struct OdbObjectsData
     static constexpr uint32_t kUnsetDepth = 0;
 
     TagInfo() = default;
+    TagInfo(std::string oidTarget, git_object_t typeTarget, uint32_t depth, uint32_t reachability)
+      : oidTarget(std::move(oidTarget)), typeTarget(typeTarget), depth(depth), reachability(reachability) {}
     ~TagInfo() = default;
     TagInfo(const TagInfo &other) = delete;
     TagInfo(TagInfo &&other) = default;
