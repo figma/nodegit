@@ -20,7 +20,9 @@ jobs:
       matrix:
         node: [18, 20, 22, 24]
     runs-on: ubuntu-latest
-    container: ubuntu:22.04
+    container:
+      image: ubuntu:22.04
+      options: --dns 8.8.8.8 --dns 1.1.1.1
     steps:
       - name: Install Dependencies for Ubuntu
         run: apt-get update && apt-get install -y git build-essential clang-14 libssl-dev libkrb5-dev libc++-14-dev libc++abi-14-dev wget python3
