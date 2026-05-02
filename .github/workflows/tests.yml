@@ -19,8 +19,8 @@ jobs:
       fail-fast: false
       matrix:
         node: [18, 20, 22, 24]
-    runs-on: ubuntu-22.04
-    container: ubuntu:20.04
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
     steps:
       - name: Install Dependencies for Ubuntu
         run: apt-get update && apt-get install -y git build-essential clang-14 libssl-dev libkrb5-dev libc++-14-dev libc++abi-14-dev wget python3
