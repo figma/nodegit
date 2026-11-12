@@ -19,7 +19,8 @@ jobs:
       fail-fast: false
       matrix:
         node: [18, 20, 22]
-    runs-on: ubuntu-latest
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
     container: ubuntu:20.04
     steps:
       - name: Install Dependencies for Ubuntu
@@ -90,7 +91,7 @@ jobs:
       fail-fast: false
       matrix:
         node: [18, 20, 22]
-        os: [macos-13-xlarge]
+        os: [macos-15, macos-15-intel]
     runs-on: ${{ matrix.os }}
   # This is mostly the same as the Linux steps, waiting for anchor support
   # https://github.com/actions/runner/issues/1182

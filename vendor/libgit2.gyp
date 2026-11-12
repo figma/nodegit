@@ -325,7 +325,7 @@
         "libgit2/src/zstream.h"
       ],
       "conditions": [
-        ["target_arch=='x64'", {
+        ["target_arch=='x64' or target_arch=='arm64'", {
           "defines": [
             "GIT_ARCH_64"
           ]
