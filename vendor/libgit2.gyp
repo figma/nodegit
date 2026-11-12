@@ -560,6 +560,12 @@
           "include_dirs": [
             "libgit2/deps/regex"
           ]
+        }],
+        ["OS=='mac'", {
+          # Clang's TARGET_OS_MAC triggers bundled zlib's classic Mac OS fdopen fallback.
+          "defines": [
+            "fdopen=fdopen"
+          ]
         }]
       ],
       "include_dirs": [
