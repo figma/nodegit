@@ -80,10 +80,11 @@ jobs:
       - name: Deploy
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
+          npm install -g @mapbox/node-pre-gyp@1.0.8 aws-sdk
           node lifecycleScripts/clean
           rm -f build/Release/obj.target/nodegit.node
-          ./node_modules/.bin/node-pre-gyp package
-          ./node_modules/.bin/node-pre-gyp publish
+          node-pre-gyp package
+          node-pre-gyp publish
 
   macos-tests:
     name: "macOS Tests"
@@ -143,7 +144,8 @@ jobs:
       - name: Deploy
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
+          npm install -g @mapbox/node-pre-gyp@1.0.8 aws-sdk
           node lifecycleScripts/clean
           rm -f build/Release/obj.target/nodegit.node
-          ./node_modules/.bin/node-pre-gyp package
-          ./node_modules/.bin/node-pre-gyp publish
+          node-pre-gyp package
+          node-pre-gyp publish
