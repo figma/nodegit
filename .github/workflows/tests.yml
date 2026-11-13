@@ -70,12 +70,6 @@ jobs:
           ssh-add ~/.ssh_tests/id_rsa
           node utils/retry npm test
 
-      - name: Package
-        run: |
-          npm install -g @mapbox/node-pre-gyp@1.0.8 aws-sdk
-          node lifecycleScripts/clean
-          node-pre-gyp package
-
       - name: configure aws credentials
         if: startsWith(github.ref, 'refs/tags/v')
         uses: aws-actions/configure-aws-credentials@v1
@@ -86,6 +80,9 @@ jobs:
       - name: Deploy
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
+          npm install -g @mapbox/node-pre-gyp@1.0.8 aws-sdk
+          node lifecycleScripts/clean
+          node-pre-gyp package
           node-pre-gyp publish
 
   macos-tests:
@@ -136,12 +133,6 @@ jobs:
           ssh-add ~/.ssh_tests/id_rsa
           node utils/retry npm test
 
-      - name: Package
-        run: |
-          npm install -g @mapbox/node-pre-gyp@1.0.8 aws-sdk
-          node lifecycleScripts/clean
-          node-pre-gyp package
-
       - name: configure aws credentials
         if: startsWith(github.ref, 'refs/tags/v')
         uses: aws-actions/configure-aws-credentials@v1
@@ -152,4 +143,7 @@ jobs:
       - name: Deploy
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
+          npm install -g @mapbox/node-pre-gyp@1.0.8 aws-sdk
+          node lifecycleScripts/clean
+          node-pre-gyp package
           node-pre-gyp publish
